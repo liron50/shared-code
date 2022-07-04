@@ -1,4 +1,5 @@
 import { LightningElement, track, api } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import LightningPrompt from 'lightning/prompt';
 import getOpenTimeLog from '@salesforce/apex/TimeLoggerController.getOpenTimeLog';
 import startTimer from '@salesforce/apex/TimeLoggerController.startTimer';
@@ -14,6 +15,8 @@ const columns = [
 export default class TimeLogger extends LightningElement {
     @api recordId;
     @api showLogs = 'Current User';
+    @api useAssignment = false;
+
     @track logRecord;
     @track showOldLogs = false;
     @track oldLogs;
@@ -25,62 +28,69 @@ export default class TimeLogger extends LightningElement {
     @track logHours;
 
     oldLogsCol = columns;
-    runningInterval
-
+    runningInterval;
+    
     connectedCallback(){
+        let params = { showLogs: this.showLogs, useAssignment: this.useAssignment};
 
-        getOpenTimeLog({recordId : this.recordId, showLogs: this.showLogs}).then(
+        getOpenTimeLog({recordId : this.recordId, params: params}).then(
             result =>{
-                this.logRecord = result.openLog;
-                this.oldLogs = result.oldLogs;
-                this.setOldLogs();
-                this.setCurrentLogTime();
-                this.loadingComplete = true;
+                this.setInitData(result);
             }
-        );        
+        );  
     }
 
+    setInitData(result){
+        this.logRecord = result.openLog;
+        this.oldLogs = result.oldLogs;
+        
+        this.showOldLogs = this.oldLogs != undefined && this.oldLogs.length > 0; 
+        for(let olog in this.oldLogs){
+            this.oldLogs[olog].username = this.oldLogs[olog].Owner.Name;
+        }
+
+        this.setCurrentLogTime();
+        this.loadingComplete = true;
+    }
+    
     startLogTimer(){
+        
         this.loadingComplete = false;
-        startTimer({recordId: this.recordId, showLogs: this.showLogs}).then(
+        let params = { showLogs: this.showLogs, useAssignment: this.useAssignment};
+        startTimer({recordId: this.recordId, params: params}).then(
             result =>{
-                this.logRecord = result.openLog;
-                this.oldLogs = result.oldLogs;
-                this.setOldLogs();
-                this.setCurrentLogTime();
+                if(result.noAssignment){
+                    this.dispatchEvent(
+                        new ShowToastEvent({
+                            title: 'Error',
+                            message: result.noAssignment,
+                            variant: 'error'
+                        })
+                    );
+                }
+                else{
+                    this.logRecord = result.openLog;
+                    this.setCurrentLogTime();
+                }
                 this.loadingComplete = true;
             }
         );
     }
 
     stopLogTimer(){
-        LightningPrompt.open({
-            message: 'Add Description',
-            labe: 'Description'
-        }).then(
+        LightningPrompt.open({message: 'Add Description', labe: 'Description'}).then(
             (result) =>{
                 this.loadingComplete = false;
+                let params = { showLogs: this.showLogs, useAssignment: this.useAssignment};
 
-                stopTimer({recordId: this.recordId, logId: this.logRecord.Id, description: result, showLogs: this.showLogs}).then(
+                stopTimer({recordId: this.recordId, logId: this.logRecord.Id, description: result, params: params}).then(
                     result =>{
-                        this.logRecord = undefined;
-                        this.oldLogs = result.oldLogs;
-                        this.setOldLogs();
-                        this.setCurrentLogTime();
                         clearInterval(this.runningInterval);
-                        this.loadingComplete = true;
+                        this.setInitData(result);
                     }
                 );
             }
         );
-    }
-
-    setOldLogs(){
-        this.showOldLogs = this.oldLogs != undefined && this.oldLogs.length > 0; 
-        
-        for(let olog in this.oldLogs){
-            this.oldLogs[olog].username = this.oldLogs[olog].Owner.Name;
-        }
     }
 
     setCurrentLogTime(){

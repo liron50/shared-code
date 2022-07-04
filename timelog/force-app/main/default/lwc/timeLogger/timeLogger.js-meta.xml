@@ -9,6 +9,7 @@
     <targetConfigs>
         <targetConfig targets="lightning__RecordPage">
             <property name="showLogs" type="String" label="Show Logs"  datasource="All,None,Current User" />
+            <property name="useAssignment" type="Boolean" label="Use Assignment" />
         </targetConfig>
     </targetConfigs>
 </LightningComponentBundle>

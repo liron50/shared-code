@@ -1,0 +1,31 @@
+<template>
+    <template if:true={loadingComplete}>
+        <lightning-card title="Log Assignments">
+            <lightning-button onclick={addAssignment} label="Add Assignment" class="slds-m-left_x-small">
+            </lightning-button>
+
+            <lightning-datatable
+                    key-field="id"
+                    data={logAssignment}
+                    columns={assignmetCol}
+                    onrowaction={handleRowAction}
+                    hide-checkbox-column="true">
+            </lightning-datatable>
+        </lightning-card>
+
+    </template>
+
+    <template if:true={newAssignmentDialog}>
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <div class="slds-modal__content slds-var-p-around_medium">
+                    <lightning-record-form  object-api-name="Time_Log_Assignment__c" record-id={editAssignmentItem} layout-type="Full" columns="2" mode="edit" onsubmit={newAssignmentSave} oncancel={closeAssignmentDialog}>
+                    </lightning-record-form>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" id="backdropAssignmentDialog"></div>
+    </template>
+
+    <lightning-spinner if:false={loadingComplete} alternative-text="Loading" size="large"></lightning-spinner>
+</template>
